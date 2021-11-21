@@ -4,19 +4,25 @@
 #include <Adafruit_Sensor.h>
 #include <DHT.h>
 #include <ESP32Encoder.h>
+#include <WiFi.h>
+#include <WebServer.h>
 
 U8G2_PCD8544_84X48_F_4W_HW_SPI u8g2(U8G2_R0, /* cs=*/17, /* dc=*/5, /* reset=*/16);
 DHT dht(4, DHT11);
 ESP32Encoder encoder;
+WebServer server(80);
 
+const char *SSID = "Macaco";
+const char *PWD = "98765432";
 const int trigPin = 12;
 const int echoPin = 14;
 
 int lSensores = 0; //Ultimo tiempo de lectura de los sensores
+int lBotones = 0;  //Ultima lectura de los botones
+bool pBoton1 = 0;  //Ultimo estado del boton
+bool boton1 = 0;   //Ultimo esta el boton presionado
 
-int lBotones = 0; //Ultima lectura de los botones
-bool pBoton1 = 0; //Ultimo estado del boton
-bool boton1 = 0;  //Ultimo esta el boton presionado
+String ip = "No conectado";
 
 bool pantalla = true; //Estado de la pantalla
 int scene = 0;        //Escena actual
@@ -87,7 +93,7 @@ void dispositivo(void *parameter)
       u8g2.setCursor(0, 45);
       u8g2.print("Materiales");
       u8g2.sendBuffer();
-      delay(5000);
+      vTaskDelay(5000 / portTICK_PERIOD_MS);
       encoder.clearCount();
       scene = 1;
       break;
@@ -125,7 +131,7 @@ void dispositivo(void *parameter)
         }
         else
         {
-          //Mandar a ajustes
+          scene = 4;
         }
         boton1 = false;
       }
@@ -158,23 +164,54 @@ void dispositivo(void *parameter)
         digitalWrite(21, pantalla);
         boton1 = false;
       }
-    case 3:
+    case 3: //Crear Sala
       u8g2.setCursor(0, 7);
       u8g2.print("CrearSala");
       u8g2.sendBuffer();
       break;
+    case 4: //Ajustes
+      u8g2.setCursor(0, 7);
+      u8g2.print("Red: ");
+      u8g2.print(SSID);
+      u8g2.setCursor(0, 15);
+      u8g2.print("Psw: ");
+      u8g2.print(PWD);
+      u8g2.setCursor(0, 23);
+      u8g2.print("IP: ");
+      u8g2.print(ip);
+      u8g2.sendBuffer();
     default:
       break;
     }
   }
 }
 
+void conectarWifi()
+{
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(SSID, PWD);
+
+  // while (WiFi.status() != WL_CONNECTED)
+  // {
+  //   Serial.print(".");
+  //   vTaskDelay(1000 / portTICK_PERIOD_MS);
+  // }
+  ip = WiFi.localIP().toString();
+}
+
 void conectividad(void *parameter)
 {
+  conectarWifi();
+  for (;;)
+  {
+    Serial.print("Funciona");
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+  }
 }
 
 void setup(void)
 {
+  Serial.begin(9600);
   xTaskCreatePinnedToCore(
       dispositivo,   // Function that should be called
       "Dispositivo", // Name of the task (for debugging)
@@ -187,7 +224,7 @@ void setup(void)
   xTaskCreatePinnedToCore(
       conectividad,   // Function that should be called
       "Conectividad", // Name of the task (for debugging)
-      1000,           // Stack size (bytes)
+      6000,           // Stack size (bytes)
       NULL,           // Parameter to pass
       1,              // Task priority
       NULL,           // Task handle
