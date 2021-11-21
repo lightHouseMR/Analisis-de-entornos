@@ -92,11 +92,51 @@ void loop(void)
     u8g2.print("Materiales");
     u8g2.sendBuffer();
     delay(5000);
+    encoder.clearCount();
     scene = 1;
     break;
-
-  case 1:
-    u8g2.setFont(u8g2_font_6x10_tf); // set the target font to calculate the pixel width
+  case 1: //Menu principal
+    u8g2.setFont(u8g2_font_6x10_tf);
+    if (encoder.getCount() / 2 % 3 == 0)
+    {
+      u8g2.drawButtonUTF8(42, 10, U8G2_BTN_INV | U8G2_BTN_HCENTER | U8G2_BTN_BW1, 0, 2, 2, "Medir");
+      u8g2.drawButtonUTF8(42, 26, U8G2_BTN_HCENTER | U8G2_BTN_BW1, 0, 2, 2, "Crear sala");
+      u8g2.drawButtonUTF8(42, 42, U8G2_BTN_HCENTER | U8G2_BTN_BW1, 0, 2, 2, "Ajustes");
+    }
+    else if (encoder.getCount() / 2 % 3 == 1)
+    {
+      u8g2.drawButtonUTF8(42, 10, U8G2_BTN_HCENTER | U8G2_BTN_BW1, 0, 2, 2, "Medir");
+      u8g2.drawButtonUTF8(42, 26, U8G2_BTN_INV | U8G2_BTN_HCENTER | U8G2_BTN_BW1, 0, 2, 2, "Crear sala");
+      u8g2.drawButtonUTF8(42, 42, U8G2_BTN_HCENTER | U8G2_BTN_BW1, 0, 2, 2, "Ajustes");
+    }
+    else
+    {
+      u8g2.drawButtonUTF8(42, 10, U8G2_BTN_HCENTER | U8G2_BTN_BW1, 0, 2, 2, "Medir");
+      u8g2.drawButtonUTF8(42, 26, U8G2_BTN_HCENTER | U8G2_BTN_BW1, 0, 2, 2, "Crear sala");
+      u8g2.drawButtonUTF8(42, 42, U8G2_BTN_INV | U8G2_BTN_HCENTER | U8G2_BTN_BW1, 0, 2, 2, "Ajustes");
+    }
+    if (boton1)
+    {
+      int next = encoder.getCount() / 2 % 3;
+      encoder.clearCount();
+      if (next == 0)
+      {
+        scene = 2;
+      }
+      else if (next == 1)
+      {
+        //Mandar a escena "Crear sala"
+      }
+      else
+      {
+        //Mandar a ajustes
+      }
+      boton1 = false;
+    }
+    u8g2.sendBuffer();
+    break;
+  case 2: //Medir
+    u8g2.setFont(u8g2_font_6x10_tf);
     u8g2.setCursor(0, 7);
     u8g2.print("Humd: ");
     u8g2.print(humedad);
