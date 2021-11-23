@@ -8,14 +8,14 @@
 #include <WebServer.h>
 
 U8G2_PCD8544_84X48_F_4W_HW_SPI u8g2(U8G2_R0, /* cs=*/17, /* dc=*/5, /* reset=*/16);
-DHT dht(4, DHT11);
+DHT dht(14, DHT11);
 ESP32Encoder encoder;
 WebServer server(80);
 
 const char *SSID = "Macaco";
 const char *PWD = "98765432";
 const int trigPin = 12;
-const int echoPin = 14;
+const int echoPin = 13;
 
 int lSensores = 0; //Ultimo tiempo de lectura de los sensores
 int lBotones = 0;  //Ultima lectura de los botones
@@ -30,6 +30,9 @@ int scene = 0;        //Escena actual
 float humedad;
 float temperatura;
 float distancia;
+int humo;
+bool ruido;
+bool lumin;
 
 float leerDistancia()
 {
@@ -50,12 +53,15 @@ float leerDistancia()
 void dispositivo(void *parameter)
 {
   dht.begin();
-  encoder.attachHalfQuad(26, 27);
+  encoder.attachHalfQuad(26, 25);
   encoder.clearCount();
   pinMode(trigPin, OUTPUT);
   pinMode(echoPin, INPUT);
+  pinMode(35, INPUT);
+  pinMode(33, INPUT_PULLDOWN);
   pinMode(21, OUTPUT);
-  pinMode(25, INPUT_PULLUP);
+  pinMode(27, INPUT_PULLUP);
+  pinMode(14, INPUT_PULLDOWN);
   u8g2.begin();
   for (;;)
   {
@@ -65,18 +71,21 @@ void dispositivo(void *parameter)
       lSensores = millis();
       humedad = dht.readHumidity();
       temperatura = dht.readTemperature();
-      distancia = leerDistancia();
+      //distancia = leerDistancia();
+      humo = analogRead(35);
+      //ruido = digitalRead(33);
+      //lumin = digitalRead(14);
     }
 
     //Leer cada 50ms todos los botones
     if (millis() > lBotones + 50)
     {
       lBotones = millis();
-      if (pBoton1 == 1 && digitalRead(25) == 0)
+      if (pBoton1 == 1 && digitalRead(27) == 0)
       {
         boton1 = true;
       }
-      pBoton1 = digitalRead(25);
+      pBoton1 = digitalRead(27);
     }
 
     //Actualizar pantalla
@@ -139,24 +148,27 @@ void dispositivo(void *parameter)
       break;
     case 2: //Medir
       u8g2.setCursor(0, 7);
-      u8g2.print("Humd: ");
-      u8g2.print(humedad);
+      u8g2.print("Humo: ");
+      u8g2.print(humo);
       u8g2.print("%");
       u8g2.setCursor(0, 15);
       u8g2.print("Temp: ");
       u8g2.print(temperatura);
       u8g2.print("C");
       u8g2.setCursor(0, 23);
-      u8g2.print("Dist: ");
-      u8g2.print(distancia);
+      u8g2.print("Humd: ");
+      u8g2.print(humedad);
       u8g2.print("cm");
       u8g2.setCursor(0, 31);
-      u8g2.print("Ruido: 12Db");
+      u8g2.print("Dist: ");
+      u8g2.print(distancia);
+      u8g2.print("%");
       u8g2.setCursor(0, 39);
-      u8g2.print("Lumin: 100lux");
+      u8g2.print("Lumin:");
+      u8g2.print(lumin);
       u8g2.setCursor(0, 47);
-      u8g2.print("Encoder: ");
-      u8g2.print(encoder.getCount() / 2);
+      u8g2.print("Ruido: ");
+      u8g2.print(ruido);
       u8g2.sendBuffer();
       if (boton1)
       {
@@ -164,6 +176,7 @@ void dispositivo(void *parameter)
         digitalWrite(21, pantalla);
         boton1 = false;
       }
+      break;
     case 3: //Crear Sala
       u8g2.setCursor(0, 7);
       u8g2.print("CrearSala");
@@ -183,6 +196,7 @@ void dispositivo(void *parameter)
     default:
       break;
     }
+    vTaskDelay(10 / portTICK_PERIOD_MS);
   }
 }
 
@@ -191,11 +205,11 @@ void conectarWifi()
   WiFi.mode(WIFI_STA);
   WiFi.begin(SSID, PWD);
 
-  // while (WiFi.status() != WL_CONNECTED)
-  // {
-  //   Serial.print(".");
-  //   vTaskDelay(1000 / portTICK_PERIOD_MS);
-  // }
+  while (WiFi.status() != WL_CONNECTED)
+  {
+    Serial.print(".");
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+  }
   ip = WiFi.localIP().toString();
 }
 
